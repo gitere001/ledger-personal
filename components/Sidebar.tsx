@@ -38,35 +38,54 @@ export default function Sidebar({ mobileOpen, onMobileClose }: Props) {
   return (
     <aside
       className={[
-        // Base — mobile: fixed overlay drawer
         'fixed inset-y-0 left-0 z-40 w-[220px]',
         'flex flex-col h-screen bg-gray-900 border-r border-gray-800',
         'transition-all duration-300 ease-in-out',
-        // Mobile slide in/out
         mobileOpen ? 'translate-x-0' : '-translate-x-full',
-        // Desktop: back in normal flow, always visible, respects collapsed width
         'lg:relative lg:inset-auto lg:z-auto lg:translate-x-0 lg:shrink-0',
         collapsed ? 'lg:w-[60px]' : 'lg:w-[220px]',
       ].join(' ')}
     >
-      {/* Brand */}
-      <div className="flex items-center gap-2.5 px-4 py-5 border-b border-gray-800 overflow-hidden">
+      {/* Brand header — expanded (mobile always + desktop when not collapsed) */}
+      <div className={`flex items-center gap-2.5 px-4 py-5 border-b border-gray-800 ${collapsed ? 'lg:hidden' : ''}`}>
         <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center shrink-0">
           <TrendingUp size={14} className="text-white" />
         </div>
-        <div className={`flex-1 min-w-0 ${collapsed ? 'lg:hidden' : ''}`}>
+        <div className="flex-1 min-w-0">
           <p className="text-white font-semibold text-sm leading-none">Ledger</p>
           <p className="text-gray-500 text-[11px] mt-0.5">Personal Finance</p>
         </div>
-        {/* X close — mobile only */}
+        {/* Mobile: X close */}
         <button
           onClick={onMobileClose}
-          className="lg:hidden ml-auto p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+          className="lg:hidden p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
           aria-label="Close menu"
         >
           <X size={18} />
         </button>
+        {/* Desktop: collapse in */}
+        <button
+          onClick={toggle}
+          className="hidden lg:flex p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-gray-800 transition-colors"
+          aria-label="Collapse sidebar"
+        >
+          <ChevronLeft size={15} />
+        </button>
       </div>
+
+      {/* Brand header — collapsed (desktop only) */}
+      {collapsed && (
+        <button
+          onClick={toggle}
+          title="Expand sidebar"
+          className="hidden lg:flex w-full flex-col items-center justify-center py-5 border-b border-gray-800 hover:bg-gray-800/50 transition-colors"
+        >
+          <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center">
+            <TrendingUp size={14} className="text-white" />
+          </div>
+          <ChevronRight size={12} className="text-gray-600 mt-1.5" />
+        </button>
+      )}
 
       {/* Nav */}
       <nav className="flex-1 px-2 py-4 space-y-1 overflow-hidden">
@@ -80,7 +99,7 @@ export default function Sidebar({ mobileOpen, onMobileClose }: Props) {
               title={collapsed ? label : undefined}
               className={[
                 'flex items-center gap-3 px-2.5 py-2.5 rounded-lg text-sm font-medium',
-                'transition-colors group relative',
+                'transition-colors relative',
                 active
                   ? 'bg-blue-600/20 text-blue-400'
                   : 'text-gray-400 hover:bg-gray-800 hover:text-white',
@@ -97,7 +116,7 @@ export default function Sidebar({ mobileOpen, onMobileClose }: Props) {
       </nav>
 
       {/* Footer */}
-      <div className="px-2 py-3 border-t border-gray-800 space-y-1">
+      <div className="px-2 py-3 border-t border-gray-800">
         <button
           onClick={() => signOut({ callbackUrl: '/login' })}
           title={collapsed ? 'Sign out' : undefined}
@@ -107,14 +126,6 @@ export default function Sidebar({ mobileOpen, onMobileClose }: Props) {
           <span className={collapsed ? 'lg:hidden' : ''}>Sign out</span>
         </button>
       </div>
-
-      {/* Collapse toggle — desktop only */}
-      <button
-        onClick={toggle}
-        className="hidden lg:flex absolute -right-3 top-[72px] w-6 h-6 rounded-full bg-gray-800 border border-gray-700 items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 transition-colors z-10"
-      >
-        {collapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
-      </button>
     </aside>
   )
 }
