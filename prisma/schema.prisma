@@ -1,0 +1,46 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model PersonalBudget {
+  id        Int      @id @default(autoincrement())
+  month     String   // YYYY-MM
+  categoryId Int
+  budgeted  Float    @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([month, categoryId])
+  @@map("personal_budgets")
+}
+
+model PersonalSavingsAccount {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  savings   PersonalSaving[]
+
+  @@map("personal_savings_accounts")
+}
+
+model PersonalSaving {
+  id        Int      @id @default(autoincrement())
+  date      DateTime
+  amount    Float
+  type      String   @default("deposit") // 'deposit' | 'interest' | 'withdrawal'
+  note      String   @default("")
+  accountId Int?
+  account   PersonalSavingsAccount? @relation(fields: [accountId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("personal_savings")
+}
