@@ -36,6 +36,7 @@ function CustomLegend({ payload }: any) {
   )
 }
 
+
 export default function SavingsAccountPie({ accounts, accountTotals }: Props) {
   const data = accounts
     .filter(a => a.isActive)

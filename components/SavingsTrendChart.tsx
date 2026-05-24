@@ -52,6 +52,7 @@ function CustomTooltip({ active, payload, label }: any) {
   )
 }
 
+
 export default function SavingsTrendChart({ data }: Props) {
   if (!data.length) return (
     <div className="flex items-center justify-center h-48 text-gray-500 text-sm">No savings data yet</div>

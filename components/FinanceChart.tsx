@@ -12,6 +12,7 @@ interface MonthData {
 const fmt = (n: number) =>
   new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES', maximumFractionDigits: 0 }).format(n)
 
+
 export default function FinanceChart({ data }: { data: MonthData[] }) {
   return (
     <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">

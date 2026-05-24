@@ -6,6 +6,11 @@ import SummaryCards from '@/components/SummaryCards'
 import FinanceChart from '@/components/FinanceChart'
 import SavingsTrendChart from '@/components/SavingsTrendChart'
 import SavingsAccountPie from '@/components/SavingsAccountPie'
+import FinanceChartSkeleton from '@/components/skeletons/FinanceChartSkeleton'
+import SavingsTrendChartSkeleton from '@/components/skeletons/SavingsTrendChartSkeleton'
+import SavingsAccountPieSkeleton from '@/components/skeletons/SavingsAccountPieSkeleton'
+import SavingsSnapshotSkeleton from '@/components/skeletons/SavingsSnapshotSkeleton'
+import RecentActivitySkeleton from '@/components/skeletons/RecentActivitySkeleton'
 import BudgetAlerts from '@/components/BudgetAlerts'
 import RecordSavingsModal from '@/components/modals/RecordSavingsModal'
 
@@ -29,7 +34,7 @@ export default function Dashboard() {
   const [overview, setOverview]       = useState<{ months: any[]; cashBalance: number } | null>(null)
   const [budget, setBudget]           = useState<any>(null)
   const [savingsData, setSavingsData] = useState<{ rows: any[]; stats: any; accountTotals: Record<number, any> } | null>(null)
-  const [savingsTrend, setSavingsTrend] = useState<any[]>([])
+  const [savingsTrend, setSavingsTrend] = useState<any[] | null>(null)
   const [accounts, setAccounts]       = useState<{ id: number; name: string; isActive: boolean }[]>([])
   const [selectedMonth, setSelectedMonth] = useState(currentMonth())
   const [chartMonths, setChartMonths] = useState(6)
@@ -143,7 +148,7 @@ export default function Dashboard() {
                 ))}
               </div>
             </div>
-            {overview && <FinanceChart data={overview.months} />}
+            {overview ? <FinanceChart data={overview.months} /> : <FinanceChartSkeleton />}
           </div>
 
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 flex flex-col gap-3">
@@ -170,9 +175,7 @@ export default function Dashboard() {
                 </button>
               </>
             ) : (
-              <div className="flex-1 flex items-center justify-center">
-                <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-              </div>
+              <SavingsSnapshotSkeleton />
             )}
           </div>
         </div>
@@ -194,17 +197,20 @@ export default function Dashboard() {
                 ))}
               </div>
             </div>
-            <SavingsTrendChart data={savingsTrend} />
+            {savingsTrend === null
+              ? <SavingsTrendChartSkeleton />
+              : <SavingsTrendChart data={savingsTrend} />
+            }
           </div>
 
           <div className="xl:col-span-2 bg-gray-900 border border-gray-800 rounded-xl p-5 flex flex-col">
             <h2 className="text-sm font-medium text-gray-300 mb-1">Balance by Account</h2>
             <p className="text-xs text-gray-500 mb-4">Current balance split across active accounts</p>
             <div className="flex-1 min-h-[260px]">
-              <SavingsAccountPie
-                accounts={accounts}
-                accountTotals={savingsData?.accountTotals ?? {}}
-              />
+              {savingsData === null || accounts.length === 0
+                ? <SavingsAccountPieSkeleton />
+                : <SavingsAccountPie accounts={accounts} accountTotals={savingsData.accountTotals} />
+              }
             </div>
           </div>
         </div>
@@ -219,6 +225,7 @@ export default function Dashboard() {
         )}
 
         {/* Row 5 — Recent savings activity */}
+        {savingsData === null && <RecentActivitySkeleton />}
         {savingsData && savingsData.rows.length > 0 && (
           <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
             <div className="px-5 py-3.5 border-b border-gray-800">
@@ -266,6 +273,7 @@ export default function Dashboard() {
     </div>
   )
 }
+
 
 function TypeBadge({ type }: { type: string }) {
   const map: Record<string, { label: string; className: string }> = {
