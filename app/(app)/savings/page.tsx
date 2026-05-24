@@ -3,12 +3,15 @@ import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import RecordSavingsModal from '@/components/modals/RecordSavingsModal'
-import { PiggyBank, TrendingUp, ArrowDownLeft, Landmark, Plus, X } from 'lucide-react'
+import { PiggyBank, TrendingUp, ArrowDownLeft, Landmark, Plus, X, RotateCcw } from 'lucide-react'
 
 interface Account { id: number; name: string; isActive: boolean }
 
 const fmt = (n: number) =>
   new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES', maximumFractionDigits: 2 }).format(n)
+
+const LIMITS = ['10', '20', '40', '50', '70', 'all'] as const
+type Limit = typeof LIMITS[number]
 
 function TypeBadge({ type }: { type: string }) {
   const map: Record<string, { label: string; className: string }> = {
@@ -28,13 +31,25 @@ export default function SavingsPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
 
-  const [data, setData]         = useState<{ rows: any[]; stats: any; accountTotals: Record<number, any> } | null>(null)
+  // Stats (all-time, never filtered)
+  const [statsData, setStatsData] = useState<{ stats: any; accountTotals: Record<number, any> } | null>(null)
+  // Accounts
   const [accounts, setAccounts] = useState<Account[]>([])
+  // Transaction history (filtered + limited)
+  const [rows, setRows]         = useState<any[]>([])
+  const [total, setTotal]       = useState(0)
+  const [rowsLoading, setRowsLoading] = useState(true)
+
+  // Filters
+  const [filterType, setFilterType]       = useState('')
+  const [filterAccount, setFilterAccount] = useState('')
+  const [limit, setLimit]                 = useState<Limit>('10')
+
+  // Modal
   const [showModal, setShowModal]   = useState(false)
   const [defaultType, setDefaultType] = useState<'deposit' | 'interest' | 'withdrawal'>('deposit')
-  const [loading, setLoading]   = useState(true)
 
-  // Add account inline state
+  // Add account inline
   const [showAddAccount, setShowAddAccount] = useState(false)
   const [newAccountName, setNewAccountName] = useState('')
   const [addingAccount, setAddingAccount]   = useState(false)
@@ -44,24 +59,44 @@ export default function SavingsPage() {
     if (status === 'unauthenticated') router.push('/login')
   }, [status, router])
 
+  const fetchStats = useCallback(async () => {
+    const res = await fetch('/api/savings?stats=true')
+    setStatsData(await res.json())
+  }, [])
+
   const fetchAccounts = useCallback(async () => {
     const res = await fetch('/api/savings/accounts')
     setAccounts(await res.json())
   }, [])
 
-  const fetchSavings = useCallback(async () => {
-    setLoading(true)
-    const res = await fetch('/api/savings?all=true')
-    setData(await res.json())
-    setLoading(false)
-  }, [])
+  const fetchRows = useCallback(async () => {
+    setRowsLoading(true)
+    const params = new URLSearchParams({ limit })
+    if (filterType)    params.set('type', filterType)
+    if (filterAccount) params.set('accountId', filterAccount)
+    const res = await fetch(`/api/savings?${params}`)
+    const data = await res.json()
+    setRows(data.rows)
+    setTotal(data.total)
+    setRowsLoading(false)
+  }, [limit, filterType, filterAccount])
 
+  useEffect(() => { fetchStats()    }, [fetchStats])
   useEffect(() => { fetchAccounts() }, [fetchAccounts])
-  useEffect(() => { fetchSavings()  }, [fetchSavings])
+  useEffect(() => { fetchRows()     }, [fetchRows])
+
+  const handleReset = () => {
+    setFilterType('')
+    setFilterAccount('')
+    setLimit('10')
+  }
+
+  const hasFilters = filterType !== '' || filterAccount !== '' || limit !== '10'
 
   const handleDelete = async (id: number) => {
     await fetch(`/api/savings?id=${id}`, { method: 'DELETE' })
-    fetchSavings()
+    fetchRows()
+    fetchStats()
   }
 
   const openModal = (type: 'deposit' | 'interest' | 'withdrawal') => {
@@ -92,11 +127,10 @@ export default function SavingsPage() {
     }
   }
 
-  const handleArchiveAccount = async (id: number) => {
+  const handleArchiveAccount  = async (id: number) => {
     await fetch(`/api/savings/accounts?id=${id}`, { method: 'DELETE' })
     fetchAccounts()
   }
-
   const handleRestoreAccount = async (id: number) => {
     await fetch(`/api/savings/accounts?id=${id}`, { method: 'PATCH' })
     fetchAccounts()
@@ -108,8 +142,8 @@ export default function SavingsPage() {
     </div>
   )
 
-  const stats = data?.stats
-  const accountTotals = data?.accountTotals ?? {}
+  const stats        = statsData?.stats
+  const accountTotals = statsData?.accountTotals ?? {}
 
   const statCards = stats ? [
     { label: 'Total Deposited', value: fmt(stats.totalDeposited), icon: PiggyBank,     color: 'text-blue-400',  bg: 'bg-blue-500/10'  },
@@ -135,7 +169,7 @@ export default function SavingsPage() {
 
       <div className="px-6 py-6 space-y-6 max-w-7xl">
 
-        {/* Stat cards */}
+        {/* Stat cards — always all-time, never affected by filters */}
         <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
           {statCards.map(({ label, value, icon: Icon, color, bg }) => (
             <div key={label} className="bg-gray-900 border border-gray-800 rounded-xl p-4 flex items-start gap-3">
@@ -163,13 +197,10 @@ export default function SavingsPage() {
             </button>
           </div>
 
-          {/* Inline add account */}
           {showAddAccount && (
             <div className="px-5 py-3 border-b border-gray-800 bg-gray-800/40 flex items-center gap-2">
               <input
-                autoFocus
-                type="text"
-                value={newAccountName}
+                autoFocus type="text" value={newAccountName}
                 onChange={e => setNewAccountName(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') handleAddAccount(); if (e.key === 'Escape') setShowAddAccount(false) }}
                 placeholder="e.g. KCB Goal Savings"
@@ -190,7 +221,6 @@ export default function SavingsPage() {
             {accounts.filter(a => a.isActive).length === 0 && (
               <p className="px-5 py-6 text-center text-gray-500 text-sm">No active accounts</p>
             )}
-            {/* Active accounts */}
             {accounts.filter(a => a.isActive).map(account => {
               const t = accountTotals[account.id] ?? { deposited: 0, interest: 0, withdrawn: 0 }
               const balance = t.deposited + t.interest - t.withdrawn
@@ -210,14 +240,11 @@ export default function SavingsPage() {
                   <div className="flex items-center gap-4">
                     <p className="text-sm font-bold text-white">{fmt(balance)}</p>
                     <button onClick={() => handleArchiveAccount(account.id)}
-                      className="text-gray-600 hover:text-yellow-400 transition-colors text-xs">
-                      archive
-                    </button>
+                      className="text-gray-600 hover:text-yellow-400 transition-colors text-xs">archive</button>
                   </div>
                 </div>
               )
             })}
-            {/* Archived accounts */}
             {accounts.filter(a => !a.isActive).map(account => {
               const t = accountTotals[account.id] ?? { deposited: 0, interest: 0, withdrawn: 0 }
               const balance = t.deposited + t.interest - t.withdrawn
@@ -240,9 +267,7 @@ export default function SavingsPage() {
                   <div className="flex items-center gap-4">
                     <p className="text-sm font-semibold text-gray-400">{fmt(balance)}</p>
                     <button onClick={() => handleRestoreAccount(account.id)}
-                      className="text-gray-600 hover:text-blue-400 transition-colors text-xs">
-                      restore
-                    </button>
+                      className="text-gray-600 hover:text-blue-400 transition-colors text-xs">restore</button>
                   </div>
                 </div>
               )
@@ -250,17 +275,78 @@ export default function SavingsPage() {
           </div>
         </div>
 
-        {/* Transaction log */}
+        {/* Transaction History */}
         <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
-          <div className="px-5 py-3.5 border-b border-gray-800">
-            <h2 className="text-sm font-medium text-gray-300">Transaction History</h2>
+          <div className="px-5 py-3.5 border-b border-gray-800 flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <h2 className="text-sm font-medium text-gray-300">Transaction History</h2>
+              {total > 0 && (
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Showing {rows.length} of {total} transactions
+                </p>
+              )}
+            </div>
+
+            {/* Filters */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Account filter */}
+              <select
+                value={filterAccount}
+                onChange={e => setFilterAccount(e.target.value)}
+                className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-gray-300 focus:outline-none focus:border-blue-500"
+              >
+                <option value="">All Accounts</option>
+                {accounts.map(a => (
+                  <option key={a.id} value={a.id}>{a.name}{!a.isActive ? ' (archived)' : ''}</option>
+                ))}
+              </select>
+
+              {/* Type filter */}
+              <select
+                value={filterType}
+                onChange={e => setFilterType(e.target.value)}
+                className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-xs text-gray-300 focus:outline-none focus:border-blue-500"
+              >
+                <option value="">All Types</option>
+                <option value="deposit">Deposit</option>
+                <option value="interest">Interest</option>
+                <option value="withdrawal">Withdrawal</option>
+              </select>
+
+              {/* Limit selector */}
+              <div className="flex items-center bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+                {LIMITS.map(l => (
+                  <button
+                    key={l}
+                    onClick={() => setLimit(l)}
+                    className={`px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                      limit === l ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-gray-200'
+                    }`}
+                  >
+                    {l === 'all' ? 'All' : l}
+                  </button>
+                ))}
+              </div>
+
+              {/* Reset */}
+              {hasFilters && (
+                <button
+                  onClick={handleReset}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-gray-400 hover:text-white border border-gray-700 rounded-lg hover:border-gray-600 transition-colors"
+                >
+                  <RotateCcw size={11} />
+                  Reset
+                </button>
+              )}
+            </div>
           </div>
-          {loading ? (
+
+          {rowsLoading ? (
             <div className="flex items-center justify-center py-16">
               <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
             </div>
-          ) : !data || data.rows.length === 0 ? (
-            <p className="py-16 text-center text-gray-500 text-sm">No transactions yet</p>
+          ) : rows.length === 0 ? (
+            <p className="py-16 text-center text-gray-500 text-sm">No transactions found</p>
           ) : (
             <table className="w-full text-sm">
               <thead>
@@ -274,7 +360,7 @@ export default function SavingsPage() {
                 </tr>
               </thead>
               <tbody>
-                {data.rows.map((row: any) => (
+                {rows.map((row: any) => (
                   <tr key={row.id} className="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors">
                     <td className="px-5 py-3 text-gray-400 text-xs whitespace-nowrap">
                       {new Date(row.date).toLocaleDateString('en-KE', { day: 'numeric', month: 'short', year: 'numeric' })}
@@ -299,7 +385,7 @@ export default function SavingsPage() {
       <RecordSavingsModal
         isOpen={showModal}
         onClose={() => setShowModal(false)}
-        onSaved={() => { fetchSavings(); fetchAccounts() }}
+        onSaved={() => { fetchStats(); fetchAccounts(); fetchRows() }}
         defaultType={defaultType}
       />
     </div>
