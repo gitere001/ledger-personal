@@ -14,7 +14,7 @@ export const authOptions: NextAuthOptions = {
           credentials?.email === process.env.LEDGER_EMAIL &&
           credentials?.password === process.env.LEDGER_PASSWORD
         ) {
-          return { id: '1', name: 'James Gitere', email: credentials.email }
+          return { id: '1', name: 'James Gitere', email: credentials!.email }
         }
         return null
       },
