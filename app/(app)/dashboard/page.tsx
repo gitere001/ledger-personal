@@ -231,7 +231,8 @@ export default function Dashboard() {
             <div className="px-5 py-3.5 border-b border-gray-800">
               <h2 className="text-sm font-medium text-gray-300">Recent Savings Activity</h2>
             </div>
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[500px]">
               <thead>
                 <tr className="border-b border-gray-800">
                   <th className="text-left px-5 py-2.5 text-gray-500 font-medium">Date</th>
@@ -261,6 +262,7 @@ export default function Dashboard() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         )}
       </div>

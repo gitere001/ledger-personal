@@ -348,7 +348,8 @@ export default function SavingsPage() {
           ) : rows.length === 0 ? (
             <p className="py-16 text-center text-gray-500 text-sm">No transactions found</p>
           ) : (
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[600px]">
               <thead>
                 <tr className="border-b border-gray-800">
                   <th className="text-left px-5 py-2.5 text-gray-500 font-medium">Date</th>
@@ -378,6 +379,7 @@ export default function SavingsPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       </div>
