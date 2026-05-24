@@ -23,7 +23,7 @@ export default function FinanceChart({ data }: { data: MonthData[] }) {
           <Tooltip
             contentStyle={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: 8 }}
             labelStyle={{ color: '#f9fafb', fontWeight: 600 }}
-            formatter={(value: number) => [fmt(value), '']}
+            formatter={(value) => [fmt(Number(value) || 0), '']}
           />
           <Legend wrapperStyle={{ fontSize: 12, color: '#9ca3af' }} />
           <Bar dataKey="income" name="Income" fill="#4ade80" radius={[4, 4, 0, 0]} />
