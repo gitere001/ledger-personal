@@ -31,7 +31,7 @@ export default function Dashboard() {
   const { data: session, status } = useSession()
   const router = useRouter()
 
-  const [overview, setOverview]       = useState<{ months: any[]; cashBalance: number } | null>(null)
+  const [overview, setOverview]       = useState<{ months: any[]; cashBalance: number; lastMonthToDate?: { income: number; expenses: number; savings: number; cashBalance: number; dateRange: string } } | null>(null)
   const [budget, setBudget]           = useState<any>(null)
   const [savingsData, setSavingsData] = useState<{ rows: any[]; stats: any; accountTotals: Record<number, any> } | null>(null)
   const [savingsTrend, setSavingsTrend] = useState<any[] | null>(null)
@@ -124,14 +124,15 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="px-6 py-6 space-y-6 max-w-7xl">
+      <div className="px-6 py-6 space-y-6">
 
-        {/* Row 1 — Stat cards */}
+        {/* Row 1 — Stat cards (current month + LMTD inline) */}
         <SummaryCards
           income={currentOverviewMonth?.income || 0}
           expenses={currentOverviewMonth?.expenses || 0}
           savings={savingsStats?.balance || 0}
           cashBalance={overview?.cashBalance || 0}
+          lmtd={overview?.lastMonthToDate}
         />
 
         {/* Row 2 — Income/Expenses bar + Savings snapshot */}
@@ -151,23 +152,25 @@ export default function Dashboard() {
             {overview ? <FinanceChart data={overview.months} /> : <FinanceChartSkeleton />}
           </div>
 
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 flex flex-col gap-3">
-            <h2 className="text-sm font-medium text-gray-300">Savings Snapshot</h2>
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 flex flex-col">
+            <h2 className="text-sm font-medium text-gray-300 mb-3">Savings Snapshot</h2>
             {savingsStats ? (
               <>
-                {[
-                  { label: 'Deposited',  value: savingsStats.totalDeposited, color: 'text-blue-400'  },
-                  { label: 'Interest',   value: savingsStats.totalInterest,  color: 'text-green-400' },
-                  { label: 'Withdrawn',  value: savingsStats.totalWithdrawn, color: 'text-red-400'   },
-                ].map(({ label, value, color }) => (
-                  <div key={label} className="flex items-center justify-between py-2 border-b border-gray-800">
-                    <span className="text-xs text-gray-500">{label}</span>
-                    <span className={`text-sm font-semibold ${color}`}>{fmt(value)}</span>
+                <div className="flex flex-col gap-0">
+                  {[
+                    { label: 'Deposited',  value: savingsStats.totalDeposited, color: 'text-blue-400'  },
+                    { label: 'Interest',   value: savingsStats.totalInterest,  color: 'text-green-400' },
+                    { label: 'Withdrawn',  value: savingsStats.totalWithdrawn, color: 'text-red-400'   },
+                  ].map(({ label, value, color }) => (
+                    <div key={label} className="flex items-center justify-between py-2 border-b border-gray-800">
+                      <span className="text-xs text-gray-500">{label}</span>
+                      <span className={`text-sm font-semibold ${color}`}>{fmt(value)}</span>
+                    </div>
+                  ))}
+                  <div className="flex items-center justify-between pt-3">
+                    <span className="text-sm text-gray-300 font-medium">Balance</span>
+                    <span className="text-base font-bold text-white">{fmt(savingsStats.balance)}</span>
                   </div>
-                ))}
-                <div className="flex items-center justify-between pt-1">
-                  <span className="text-sm text-gray-300 font-medium">Balance</span>
-                  <span className="text-base font-bold text-white">{fmt(savingsStats.balance)}</span>
                 </div>
                 <button onClick={() => setShowSavingsModal(true)}
                   className="mt-auto w-full py-2 bg-blue-600/20 border border-blue-600/30 text-blue-400 text-sm rounded-lg hover:bg-blue-600/30 transition-colors">
